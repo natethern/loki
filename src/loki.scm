@@ -13,6 +13,8 @@
   (string-append
     "loki v" *version* "\n"))
 
+(define opt-debug debug)
+
 (define-record-type <loki-options>
   (make-loki-options targets args)
   loki-options?
@@ -33,7 +35,11 @@
                   (display-and-exit-proc (version-string)))
           (option '(#\h "help") #f #f
                   (display-and-exit-proc
-                   "Usage: TODO, someone please fill this in...")))
+                   "Usage: TODO, someone please fill this in..."))
+          (option '(#\n #\q "nodebug" "quiet") #f #f
+		  (lambda (opt name arg options)
+		    (set! opt-debug (lambda args #f))
+		    options)))
     (lambda (opt name arg loads)
       (error "Unrecognized option" name))
     (let ((mode 'targets)) ; targets | options
@@ -55,7 +61,7 @@
     (with-loki-command-line (loki-options-args options) (lambda ()
       (for-each
         (lambda (target)
-          (load-module-from-cache (make-path target)))
+          (load-module-from-cache (make-path target) opt-debug))
         (loki-options-targets options))))))
 
 (with-exception-handler

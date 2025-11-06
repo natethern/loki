@@ -25,8 +25,10 @@
    serialize-module
    deserialize-module)
   (begin
-   
+
    (define *module-dirs* '("src"))
+
+   (define opt-debug debug)
 
    (define (serialize-export e) (cons (car e) (serialize-binding (cdr e))))
    (define (deserialize-export e) (cons (car e) (deserialize-binding (cdr e))))
@@ -239,8 +241,10 @@
      (core::module-visited?-set! module #f)
      (core::module-invoked?-set! module #f)
      (import-module (core::module-name module)))
-   
-   (define (load-module-from-cache path)
+
+  (define (load-module-from-cache path . debug-arg)
+     (if (pair? debug-arg)
+	 (set! opt-debug (car debug-arg)) #f)
      (let* ((path (wrap-path path))
             (path-string (path->string path))
             (cache-path (path->string (path-with-suffix path "so"))))
@@ -249,21 +253,21 @@
        (if (and (file-exists? cache-path)
                 (>= (file-mtime cache-path)
                     (file-mtime path-string)))
-           (let* ((foo (debug "before deserialize"))
+           (let* ((foo (opt-debug "before deserialize"))
                   (module (deserialize-module (syntax->datum (car (read-file cache-path #f)))))
                   (imported-libraries (core::module-imported-libraries module)))
              (for-each (lambda (imported-module) (load-module (car imported-module)))
                        imported-libraries)
              (register-module! module)
              (import-module (core::module-name module))
-             (debug "deserialized module from" cache-path)
+             (opt-debug "deserialized module from" cache-path)
              module)
          (let* ((module (expand-module (read-file path #f)
                                        with-default-loader '() #f))
                 (serialized (serialize-module module)))
            (register-module! module)
            (import-module (core::module-name module))
-           (debug "caching module to" cache-path)
+           (opt-debug "caching module to" cache-path)
            (with-output-to-file cache-path (lambda () (write serialized)))
            module))))
 
